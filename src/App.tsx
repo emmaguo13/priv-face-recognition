@@ -9,22 +9,22 @@ function App() {
   const webcamRef = useRef<Webcam>(null);
   const [selfie, setSelfie] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [pyodide, setPyodide] = useState<any>(null);
-  const [features, setFeatures] = useState<number[] | null>(null);
+  // const [pyodide, setPyodide] = useState<any>(null);
+  // const [features, setFeatures] = useState<number[] | null>(null);
 
-  useEffect(() => {
-    const loadPyodide = async () => {
-      if (window.loadPyodide) {
-        const pyodide = await window.loadPyodide();
-        await pyodide.loadPackage(['numpy', 'Pillow']);
-        setPyodide(pyodide);
-      } else {
-        console.error('Pyodide is not loaded');
-      }
-    };
+  // useEffect(() => {
+  //   const loadPyodide = async () => {
+  //     if (window.loadPyodide) {
+  //       const pyodide = await window.loadPyodide();
+  //       await pyodide.loadPackage(['numpy', 'Pillow', 'facenet-pytorch', 'torch', 'opencv-python']);
+  //       setPyodide(pyodide);
+  //     } else {
+  //       console.error('Pyodide is not loaded');
+  //     }
+  //   };
 
-    loadPyodide();
-  }, []);
+  //   loadPyodide();
+  // }, []);
 
 
   const captureSelfie = () => {
@@ -32,7 +32,6 @@ function App() {
       const imageSrc = webcamRef.current.getScreenshot();
       console.log("selfie image stored in client", imageSrc)
       setSelfie(imageSrc);
-      processImage()
     }
   };
 
@@ -49,18 +48,27 @@ function App() {
   };
 
   const processImage = async () => {
-    if (!pyodide) return;
-
-    const script = `
-      features = "hello"
-      features
-    `;
 
     try {
-      const result = await pyodide.runPythonAsync(script);
-      setFeatures(result);
+      const response = await fetch('http://127.0.0.1:5000/process_images', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images: [uploadedImage, selfie],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const result = await response.json();
+      console.log(result)
+      // setFeatures(result);
     } catch (error) {
-      console.error("Error processing image:", error);
+      console.error('Error processing images:', error);
     }
   };
 
@@ -106,11 +114,10 @@ function App() {
             <img src={uploadedImage} alt="Uploaded" style={styles.image} />
           </div>
         )}
-        {features && (
-          <div>
-            <h3>Extracted Features</h3>
-          </div>
+        {uploadedImage && selfie && (
+           <button onClick={processImage} style={styles.button}>Process Images</button>
         )}
+
       </div>
     </div>
     </div>
