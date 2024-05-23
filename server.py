@@ -8,6 +8,7 @@ import torch
 from torch.autograd import Variable
 import base64
 from io import BytesIO
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -15,10 +16,26 @@ CORS(app)
 mtcnn = MTCNN(keep_all=False)
 
 def ReadImage(base64_image):
-    # Decode the base64 image
     image_data = base64.b64decode(base64_image.split(",")[1])
-    img_pil = Image.open(BytesIO(image_data))
+
+    # Convert the bytes to a NumPy array
+    np_arr = np.frombuffer(image_data, np.uint8)
+    # Decode the NumPy array into an image
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
     
+    # Convert the image from BGR to RGB for further processing
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    # Convert to PIL Image format
+    img_pil = Image.fromarray(img_rgb)
+    img_pil.show()
+
+    # Convert the PIL image to a tensor
+    # img_tensor = torch.from_numpy(np.array(img_pil)).float()
+    # img_tensor = img_tensor.permute(2, 0, 1).unsqueeze(0)  # Add batch dimension and change to CHW format
+  # Add batch dimension and change to CHW format
+    # print(img_tensor.shape)
+    # print(img_tensor)
     # Detect and align the face
     aligned_face, prob = mtcnn(img_pil, return_prob=True)
 
@@ -75,6 +92,10 @@ def process_images():
         return jsonify({"error": "Exactly two base64 encoded images are required"}), 400
 
     result = process_image(base64_imgs)
+
+    with open('input.json', 'w') as json_file:
+        json.dump(result, json_file, indent=4)
+    
     return jsonify(result)
 
 if __name__ == '__main__':
