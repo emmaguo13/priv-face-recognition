@@ -9,6 +9,8 @@ from torch.autograd import Variable
 import base64
 from io import BytesIO
 import json
+import subprocess
+
 
 app = Flask(__name__)
 CORS(app)
@@ -95,6 +97,23 @@ def process_images():
 
     with open('input.json', 'w') as json_file:
         json.dump(result, json_file, indent=4)
+    
+    command = "pwd"
+    
+    try:
+        # Run the command
+        completed_process = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        print(completed_process.stdout)
+        return jsonify({
+            "stdout": completed_process.stdout,
+            "stderr": completed_process.stderr
+        })
+    except subprocess.CalledProcessError as e:
+        return jsonify({
+            "error": str(e),
+            "stdout": e.stdout,
+            "stderr": e.stderr
+        }), 400
     
     return jsonify(result)
 
